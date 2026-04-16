@@ -264,16 +264,19 @@ class Player:
         draw_y = self.rect.y
 
         img = None
+        valid_frames = []
         if Assets.characters and self.form < len(Assets.characters):
             frames = Assets.characters[self.form]
-            is_walking = self.vx != 0 and self.is_grounded
+            valid_frames = [f for f in frames if f is not None]
             
-            if is_walking:
-                # Based on time, loop through frames 0 to 3
-                frame_idx = (pygame.time.get_ticks() // 280) % len(frames)
-                img = frames[frame_idx]
-            else:
-                img = frames[0]
+            if valid_frames:
+                is_walking = self.vx != 0 and self.is_grounded
+                
+                if is_walking and len(valid_frames) > 1:
+                    frame_idx = (pygame.time.get_ticks() // 150) % len(valid_frames)
+                    img = valid_frames[frame_idx]
+                else:
+                    img = valid_frames[0]
 
         if img is not None:
             # 翻转逻辑：如果朝左就翻转切图
