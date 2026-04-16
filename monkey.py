@@ -64,6 +64,7 @@ class Assets:
     items = {}
     backgrounds = []
     sounds = {}
+    item_images = {}
 
     @classmethod
     def init(cls):
@@ -76,6 +77,47 @@ class Assets:
                     return None
                 img = pygame.image.load(path).convert_alpha()
                 return pygame.transform.scale(img, target_size)
+
+            def create_item_image(color, shape, size=(30, 30)):
+                surf = pygame.Surface(size, pygame.SRCALPHA)
+                if shape == 'circle':
+                    pygame.draw.circle(surf, color, (size[0]//2, size[1]//2), size[0]//2 - 2)
+                elif shape == 'diamond':
+                    pts = [(size[0]//2, 2), (size[0]-2, size[1]//2), (size[0]//2, size[1]-2), (2, size[1]//2)]
+                    pygame.draw.polygon(surf, color, pts)
+                elif shape == 'star':
+                    cx, cy = size[0]//2, size[1]//2
+                    r = size[0]//2 - 2
+                    pts = []
+                    for i in range(10):
+                        angle = i * 3.14159 / 5 - 3.14159 / 2
+                        rr = r if i % 2 == 0 else r // 2
+                        pts.append((cx + rr * math.cos(angle), cy + rr * math.sin(angle)))
+                    pygame.draw.polygon(surf, color, pts)
+                elif shape == 'heart':
+                    w, h = size
+                    pygame.draw.ellipse(surf, color, (2, h//4, w//2-2, h//2))
+                    pygame.draw.ellipse(surf, color, (w//2, h//4, w//2-2, h//2))
+                    pygame.draw.polygon(surf, color, [(w//4, h//2), (w*3//4, h//2), (w//2, h-2)])
+                elif shape == 'box':
+                    pygame.draw.rect(surf, color, (2, 2, size[0]-4, size[1]-4), border_radius=4)
+                elif shape == 'pill':
+                    pygame.draw.rect(surf, color, (size[0]//4, 2, size[0]//2, size[1]-4), border_radius=size[0]//4)
+                return surf
+
+            import math
+            cls.item_images = {
+                'jingu': create_item_image((255, 215, 0), 'diamond'),
+                'document': create_item_image((255, 255, 255), 'box'),
+                'fan': create_item_image((255, 100, 100), 'pill'),
+                'heart': create_item_image((255, 50, 50), 'heart'),
+                'star': create_item_image((255, 255, 0), 'star'),
+                'coin': create_item_image((255, 215, 0), 'circle'),
+                'gem': create_item_image((0, 255, 255), 'diamond'),
+                'shield': create_item_image((100, 100, 255), 'circle'),
+                'speed': create_item_image((0, 255, 0), 'star'),
+                'magic': create_item_image((200, 0, 200), 'star'),
+            }
 
             cls.characters = [
                 [
@@ -150,9 +192,10 @@ class Player:
         self.rect = pygame.Rect(x, y, 40, 40)
         self.vx = 0
         self.vy = 0
-        self.form = 0 # 0: 小猴, 1: 大圣, 2: 斗战胜佛
+        self.form = 0
         self.max_hp = 3
         self.hp = 3
+        self.score = 0
         self.facing_right = True
         self.is_grounded = False
         self.can_double_jump = False
@@ -165,6 +208,7 @@ class Player:
         self.dash_cooldown = 0
         
         self.invincibility_timer = 0
+        self.speed_boost_timer = 0
 
     def evolve(self, new_form):
         self.form = new_form
@@ -183,6 +227,8 @@ class Player:
                 self.is_attacking = False
         if self.dash_cooldown > 0:
             self.dash_cooldown -= 1
+        if self.speed_boost_timer > 0:
+            self.speed_boost_timer -= 1
 
         left_pressed = keys[pygame.K_LEFT] or keys[pygame.K_a]
         right_pressed = keys[pygame.K_RIGHT] or keys[pygame.K_d]
@@ -195,6 +241,8 @@ class Player:
                 self.is_dashing = False
         else:
             speed = MOVE_SPEED
+            if self.speed_boost_timer > 0:
+                speed *= 1.5
             in_quicksand = any(p.colliderect(self.rect) and p_type == 'quicksand' for p, p_type in platforms)
             if in_quicksand:
                 speed *= 0.4
@@ -402,6 +450,7 @@ class Game:
         self.dialogue_timer = 0
         self.game_over = False
         self.game_won = False
+        self.player.score = 0
         self.load_level(1)
 
     def load_level(self, level, keep_form=True):
@@ -437,7 +486,12 @@ class Game:
                 Enemy(1200, 460, 40, 40, 'rolling_stone', 1),
                 Enemy(2200, 360, 40, 40, 'rolling_stone', 1)
             ]
-            self.items = [{'rect': pygame.Rect(2800, 450, 40, 40), 'type': 'jingu', 'collected': False}]
+            self.items = [
+                {'rect': pygame.Rect(2800, 450, 30, 30), 'type': 'jingu', 'collected': False},
+                {'rect': pygame.Rect(600, 400, 30, 30), 'type': 'heart', 'collected': False},
+                {'rect': pygame.Rect(1200, 400, 30, 30), 'type': 'coin', 'collected': False},
+                {'rect': pygame.Rect(1800, 350, 30, 30), 'type': 'star', 'collected': False},
+            ]
             self.show_dialogue("小猴：我要踏上取经路，先闯过这黑风山！", 180)
             
         elif level == 2:
@@ -459,7 +513,12 @@ class Game:
                 Enemy(1600, 450, 40, 50, 'sha_illusion', 5),
                 Enemy(3200, 450, 40, 50, 'sha_illusion', 5)
             ]
-            self.items = [{'rect': pygame.Rect(3800, 450, 40, 40), 'type': 'document', 'collected': False}]
+            self.items = [
+                {'rect': pygame.Rect(3800, 450, 30, 30), 'type': 'document', 'collected': False},
+                {'rect': pygame.Rect(800, 400, 30, 30), 'type': 'gem', 'collected': False},
+                {'rect': pygame.Rect(1500, 350, 30, 30), 'type': 'shield', 'collected': False},
+                {'rect': pygame.Rect(2500, 400, 30, 30), 'type': 'speed', 'collected': False},
+            ]
             self.show_dialogue("齐天大圣：俺老孙来也！这流沙河也拦不住我！", 180)
             
         elif level == 3:
@@ -481,7 +540,12 @@ class Game:
                 {'rect': pygame.Rect(1800, 100, 40, 450), 'timer': 120, 'active': False}
             ]
             self.enemies = [Enemy(2200, 350, 100, 150, 'bull_demon', 20)]
-            self.items = [{'rect': pygame.Rect(2400, 450, 40, 40), 'type': 'fan', 'collected': False}]
+            self.items = [
+                {'rect': pygame.Rect(2400, 450, 30, 30), 'type': 'fan', 'collected': False},
+                {'rect': pygame.Rect(600, 350, 30, 30), 'type': 'magic', 'collected': False},
+                {'rect': pygame.Rect(1200, 400, 30, 30), 'type': 'gem', 'collected': False},
+                {'rect': pygame.Rect(1800, 300, 30, 30), 'type': 'heart', 'collected': False},
+            ]
             self.show_dialogue("斗战胜佛：历经磨难，终成正果。牛魔王，受死吧！", 180)
 
     def show_dialogue(self, text, duration):
@@ -564,19 +628,47 @@ class Game:
         for item in self.items:
             if not item['collected'] and self.player.rect.colliderect(item['rect']):
                 item['collected'] = True
-                if 'evolve' in Assets.sounds: 
-                    Assets.sounds['evolve'].play()
-                if item['type'] == 'jingu':
+                item_type = item['type']
+                
+                if item_type in ('jingu', 'document', 'fan'):
+                    if 'evolve' in Assets.sounds: 
+                        Assets.sounds['evolve'].play()
+                
+                if item_type == 'jingu':
                     self.player.evolve(1)
                     self.show_dialogue("获得金箍棒碎片！进化为齐天大圣！", 120)
                     self.load_level(2)
-                elif item['type'] == 'document':
+                elif item_type == 'document':
                     self.player.evolve(2)
                     self.show_dialogue("获得通关文牒！进化为斗战胜佛！", 120)
                     self.load_level(3)
-                elif item['type'] == 'fan':
+                elif item_type == 'fan':
                     self.game_won = True
                     self.show_dialogue("取得芭蕉扇，成功抵达灵山！修成正果！按 R 键重玩", 9999)
+                elif item_type == 'heart':
+                    self.player.hp = min(self.player.hp + 1, self.player.max_hp)
+                    self.show_dialogue("获得爱心！生命值 +1", 60)
+                elif item_type == 'star':
+                    self.player.score += 100
+                    self.show_dialogue("获得星星！分数 +100", 60)
+                elif item_type == 'coin':
+                    self.player.score += 50
+                    self.show_dialogue("获得金币！分数 +50", 60)
+                elif item_type == 'gem':
+                    self.player.score += 200
+                    self.show_dialogue("获得宝石！分数 +200", 60)
+                elif item_type == 'shield':
+                    self.player.invincibility_timer = 180
+                    self.show_dialogue("获得护盾！3秒无敌", 60)
+                elif item_type == 'speed':
+                    self.player.speed_boost_timer = 300
+                    self.show_dialogue("获得速度提升！5秒内移动速度加快", 60)
+                elif item_type == 'magic':
+                    for enemy in self.enemies:
+                        if not enemy.dead:
+                            enemy.hp = 0
+                            enemy.dead = True
+                    self.show_dialogue("释放魔法！击败所有敌人", 60)
 
         # 摄像机跟随
         target_x = self.player.rect.x - WIDTH // 2
@@ -606,7 +698,14 @@ class Game:
         # 绘制物品
         for item in self.items:
             if not item['collected']:
-                pygame.draw.circle(surface, GOLD, (item['rect'].centerx - self.camera_x, item['rect'].centery), item['rect'].width//2)
+                item_type = item['type']
+                img = Assets.item_images.get(item_type)
+                if img:
+                    x = item['rect'].x - self.camera_x
+                    y = item['rect'].y
+                    surface.blit(img, (x, y))
+                else:
+                    pygame.draw.circle(surface, GOLD, (item['rect'].centerx - self.camera_x, item['rect'].centery), item['rect'].width//2)
 
         # 绘制敌人
         for enemy in self.enemies:
@@ -622,9 +721,16 @@ class Game:
         ui_text = font_small.render(f"关卡 {self.level}: {level_names[self.level-1]} | 形态: {form_names[self.player.form]}", True, WHITE)
         surface.blit(ui_text, (10, 10))
         
+        score_text = font_small.render(f"分数: {self.player.score}", True, GOLD)
+        surface.blit(score_text, (10, 35))
+        
         for i in range(self.player.max_hp):
             color = RED if i < self.player.hp else GRAY
             pygame.draw.circle(surface, color, (30 + i * 30, 60), 10)
+        
+        if self.player.speed_boost_timer > 0:
+            speed_text = font_small.render("速度提升!", True, (0, 255, 0))
+            surface.blit(speed_text, (10, 85))
 
         # 对话框
         if self.dialogue:
