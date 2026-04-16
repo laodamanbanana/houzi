@@ -181,7 +181,6 @@ class Player:
         if self.dash_cooldown > 0:
             self.dash_cooldown -= 1
 
-        # 冲刺逻辑
         if self.dash_timer > 0:
             self.dash_timer -= 1
             self.vx = DASH_SPEED if self.facing_right else -DASH_SPEED
@@ -189,20 +188,18 @@ class Player:
             if self.dash_timer == 0:
                 self.is_dashing = False
         else:
-            # 移动逻辑
             speed = MOVE_SPEED
             in_quicksand = any(p.colliderect(self.rect) and p_type == 'quicksand' for p, p_type in platforms)
             if in_quicksand:
                 speed *= 0.4
 
+            self.vx = 0
             if keys[pygame.K_LEFT] or keys[pygame.K_a]:
                 self.vx = -speed
                 self.facing_right = False
-            elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
                 self.vx = speed
                 self.facing_right = True
-            else:
-                self.vx = 0
 
             # 重力
             self.vy += GRAVITY
@@ -258,7 +255,7 @@ class Player:
 
     def draw(self, surface, camera_x):
         if self.invincibility_timer % 10 > 5:
-            return # 闪烁效果
+            return
 
         draw_x = self.rect.x - camera_x
         draw_y = self.rect.y
@@ -277,21 +274,21 @@ class Player:
                     img = valid_frames[frame_idx]
                 else:
                     img = valid_frames[0]
-
+        
         if img is not None:
-            # 翻转逻辑：如果朝左就翻转切图
             if not self.facing_right:
                 img = pygame.transform.flip(img, True, False)
             surface.blit(img, (draw_x, draw_y))
-        else:
-            if self.form == 0:
-                pygame.draw.rect(surface, (139, 69, 19), (draw_x, draw_y, self.rect.width, self.rect.height))
-            elif self.form == 1:
-                pygame.draw.rect(surface, GOLD, (draw_x, draw_y, self.rect.width, self.rect.height))
-                pygame.draw.rect(surface, RED, (draw_x, draw_y + 5, self.rect.width, 5)) # 紧箍咒
-            elif self.form == 2:
-                pygame.draw.rect(surface, GOLD, (draw_x, draw_y, self.rect.width, self.rect.height))
-                pygame.draw.circle(surface, GOLD, (draw_x + self.rect.width//2, draw_y + self.rect.height//2), 30, 2) # 佛光
+            return
+
+        if self.form == 0:
+            pygame.draw.rect(surface, (139, 69, 19), (draw_x, draw_y, self.rect.width, self.rect.height))
+        elif self.form == 1:
+            pygame.draw.rect(surface, GOLD, (draw_x, draw_y, self.rect.width, self.rect.height))
+            pygame.draw.rect(surface, RED, (draw_x, draw_y + 5, self.rect.width, 5))
+        elif self.form == 2:
+            pygame.draw.rect(surface, GOLD, (draw_x, draw_y, self.rect.width, self.rect.height))
+            pygame.draw.circle(surface, GOLD, (draw_x + self.rect.width//2, draw_y + self.rect.height//2), 30, 2)
 
         # 绘制攻击
         if self.is_attacking:
@@ -629,6 +626,11 @@ class Game:
 def main():
     Assets.init()
     game = Game()
+    print(f"资源加载状态: {Assets.loaded}")
+    print(f"角色帧数: {len(Assets.characters)}")
+    if Assets.characters:
+        print(f"第一形态帧数: {len(Assets.characters[0])}")
+        print(f"有效帧: {[f is not None for f in Assets.characters[0]]}")
     
     while True:
         keys = pygame.key.get_pressed()
