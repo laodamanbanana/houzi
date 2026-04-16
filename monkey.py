@@ -67,11 +67,13 @@ class Assets:
 
     @classmethod
     def init(cls):
-        if cls.loaded: return
+        if cls.loaded: 
+            return
         try:
             import os
             def load_single(path, target_size):
-                if not os.path.exists(path): return None
+                if not os.path.exists(path): 
+                    return None
                 img = pygame.image.load(path).convert_alpha()
                 return pygame.transform.scale(img, target_size)
 
@@ -103,7 +105,8 @@ class Assets:
 
             # 保留并优化三层关卡的背景素材的等比缩放，避免拉伸问题
             def load_slice(path, cols, rows, target_size=None, colorkey_pos=(0,0)):
-                if not os.path.exists(path): return []
+                if not os.path.exists(path): 
+                    return []
                 sheet = pygame.image.load(path).convert_alpha()
                 w, h = sheet.get_width() // cols, sheet.get_height() // rows
                 slices = []
@@ -181,6 +184,9 @@ class Player:
         if self.dash_cooldown > 0:
             self.dash_cooldown -= 1
 
+        left_pressed = keys[pygame.K_LEFT] or keys[pygame.K_a]
+        right_pressed = keys[pygame.K_RIGHT] or keys[pygame.K_d]
+        
         if self.dash_timer > 0:
             self.dash_timer -= 1
             self.vx = DASH_SPEED if self.facing_right else -DASH_SPEED
@@ -194,10 +200,10 @@ class Player:
                 speed *= 0.4
 
             self.vx = 0
-            if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+            if left_pressed:
                 self.vx = -speed
                 self.facing_right = False
-            if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            if right_pressed:
                 self.vx = speed
                 self.facing_right = True
 
@@ -234,11 +240,13 @@ class Player:
             self.vy = JUMP_FORCE
             self.is_grounded = False
             self.can_double_jump = self.form >= 1
-            if 'jump' in Assets.sounds: Assets.sounds['jump'].play()
-        elif self.can_double_jump:
-            self.vy = DOUBLE_JUMP_FORCE
-            self.can_double_jump = False
-            if 'jump' in Assets.sounds: Assets.sounds['jump'].play()
+            if 'jump' in Assets.sounds: 
+                Assets.sounds['jump'].play()
+            if self.can_double_jump:
+                self.vy = DOUBLE_JUMP_FORCE
+                self.can_double_jump = False
+                if 'jump' in Assets.sounds: 
+                    Assets.sounds['jump'].play()
 
     def attack(self):
         if self.form >= 1 and self.attack_timer <= 0:
@@ -251,7 +259,8 @@ class Player:
             self.dash_timer = DASH_DURATION
             self.dash_cooldown = DASH_COOLDOWN
             self.invincibility_timer = DASH_DURATION
-            if 'dash' in Assets.sounds: Assets.sounds['dash'].play()
+            if 'dash' in Assets.sounds: 
+                Assets.sounds['dash'].play()
 
     def draw(self, surface, camera_x):
         if self.invincibility_timer % 10 > 5:
@@ -312,7 +321,8 @@ class Enemy:
         self.dead = False
 
     def update(self, player, platforms):
-        if self.dead: return
+        if self.dead: 
+            return
 
         if self.type == 'bear':
             self.rect.x += self.vx
@@ -353,7 +363,8 @@ class Enemy:
             if self.attack_cooldown > 0: self.attack_cooldown -= 1
 
     def draw(self, surface, camera_x):
-        if self.dead: return
+        if self.dead: 
+            return
         draw_x = self.rect.x - camera_x
         draw_y = self.rect.y
         
@@ -507,7 +518,8 @@ class Game:
             for enemy in self.enemies:
                 if not enemy.dead and attack_rect.colliderect(enemy.rect):
                     enemy.hp -= 1
-                    if 'hit' in Assets.sounds: Assets.sounds['hit'].play()
+                    if 'hit' in Assets.sounds: 
+                        Assets.sounds['hit'].play()
                     enemy.rect.x += 20 if self.player.facing_right else -20
                     if enemy.hp <= 0:
                         enemy.dead = True
@@ -520,7 +532,8 @@ class Game:
             if not enemy.dead and self.player.invincibility_timer <= 0 and self.player.rect.colliderect(enemy.rect):
                 self.player.hp -= 1
                 self.player.invincibility_timer = INVINCIBILITY_FRAMES
-                if 'hurt' in Assets.sounds: Assets.sounds['hurt'].play()
+                if 'hurt' in Assets.sounds: 
+                    Assets.sounds['hurt'].play()
                 if self.player.hp <= 0:
                     self.game_over = True
                     self.show_dialogue("胜败乃兵家常事，按 R 键重新来过。", 9999)
@@ -534,7 +547,8 @@ class Game:
             if h['active'] and self.player.invincibility_timer <= 0 and self.player.rect.colliderect(h['rect']):
                 self.player.hp -= 1
                 self.player.invincibility_timer = INVINCIBILITY_FRAMES
-                if 'hurt' in Assets.sounds: Assets.sounds['hurt'].play()
+                if 'hurt' in Assets.sounds: 
+                    Assets.sounds['hurt'].play()
 
         # 岩浆碰撞
         for p, p_type in self.platforms:
@@ -542,13 +556,15 @@ class Game:
                 self.player.hp -= 1
                 self.player.vy = -10
                 self.player.invincibility_timer = INVINCIBILITY_FRAMES
-                if 'hurt' in Assets.sounds: Assets.sounds['hurt'].play()
+                if 'hurt' in Assets.sounds: 
+                    Assets.sounds['hurt'].play()
 
         # 物品收集
         for item in self.items:
             if not item['collected'] and self.player.rect.colliderect(item['rect']):
                 item['collected'] = True
-                if 'evolve' in Assets.sounds: Assets.sounds['evolve'].play()
+                if 'evolve' in Assets.sounds: 
+                    Assets.sounds['evolve'].play()
                 if item['type'] == 'jingu':
                     self.player.evolve(1)
                     self.show_dialogue("获得金箍棒碎片！进化为齐天大圣！", 120)
@@ -645,6 +661,11 @@ def main():
                     game.player.attack()
                 if event.key == pygame.K_k:
                     game.player.dash()
+        
+        if keys[pygame.K_j]:
+            game.player.attack()
+        if keys[pygame.K_k]:
+            game.player.dash()
 
         game.update(keys)
         game.draw(screen)
