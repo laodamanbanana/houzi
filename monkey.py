@@ -8,13 +8,13 @@ pygame.init()
 # 游戏常量
 WIDTH, HEIGHT = 800, 600
 FPS = 60
-GRAVITY = 0.6
-JUMP_FORCE = -12
-DOUBLE_JUMP_FORCE = -10
-MOVE_SPEED = 5
-DASH_SPEED = 15
-DASH_DURATION = 15
-DASH_COOLDOWN = 60
+GRAVITY = 0.5
+JUMP_FORCE = -13
+DOUBLE_JUMP_FORCE = -11
+MOVE_SPEED = 6
+DASH_SPEED = 18
+DASH_DURATION = 10
+DASH_COOLDOWN = 45
 ATTACK_DURATION = 15
 ATTACK_COOLDOWN = 20
 INVINCIBILITY_FRAMES = 60
@@ -199,15 +199,16 @@ class Player:
             if in_quicksand:
                 speed *= 0.4
 
-            self.vx = 0
+            target_vx = 0
             if left_pressed:
-                self.vx = -speed
+                target_vx = -speed
                 self.facing_right = False
             if right_pressed:
-                self.vx = speed
+                target_vx = speed
                 self.facing_right = True
+            
+            self.vx += (target_vx - self.vx) * 0.3
 
-            # 重力
             self.vy += GRAVITY
             if in_quicksand and self.vy > 2:
                 self.vy = 2
@@ -239,14 +240,14 @@ class Player:
         if self.is_grounded:
             self.vy = JUMP_FORCE
             self.is_grounded = False
-            self.can_double_jump = self.form >= 1
+            self.can_double_jump = True
             if 'jump' in Assets.sounds: 
                 Assets.sounds['jump'].play()
-            if self.can_double_jump:
-                self.vy = DOUBLE_JUMP_FORCE
-                self.can_double_jump = False
-                if 'jump' in Assets.sounds: 
-                    Assets.sounds['jump'].play()
+        elif self.can_double_jump and self.form >= 1:
+            self.vy = DOUBLE_JUMP_FORCE
+            self.can_double_jump = False
+            if 'jump' in Assets.sounds: 
+                Assets.sounds['jump'].play()
 
     def attack(self):
         if self.form >= 1 and self.attack_timer <= 0:
