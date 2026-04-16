@@ -99,6 +99,7 @@ class Assets:
             cls.enemies['bear'] = load_single('assets/enemy_0.png', (50, 50))
             cls.enemies['sha_illusion'] = load_single('assets/enemy_1.png', (40, 50))
             cls.enemies['bull_demon'] = load_single('assets/enemy_2.png', (100, 150))
+            cls.enemies['rolling_stone'] = load_single('assets/enemy_3.png', (40, 40))
 
             # 保留并优化三层关卡的背景素材的等比缩放，避免拉伸问题
             def load_slice(path, cols, rows, target_size=None, colorkey_pos=(0,0)):
